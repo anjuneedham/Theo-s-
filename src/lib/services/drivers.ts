@@ -62,10 +62,14 @@ export async function acceptDelivery(user: SessionUser, deliveryId: string) {
   if (delivery.driver_id || delivery.status !== "unassigned") throw new OrderError("Another driver already accepted this delivery", 409);
   const active = await db.count("deliveries", { driver_id: driver.id, status: ["assigned", "picked_up"] });
   if (active >= 3) throw new OrderError("Finish your current deliveries first (max 3 at a time)", 409);
-  const updated = await db.update("deliveries", deliveryId, { driver_id: driver.id, status: "assigned", assigned_at: new Date().toISOString() });
-  // Re-read to detect a concurrent accept (the database enforces this with a conditional update; see migration).
-  const check = await db.get("deliveries", deliveryId);
-  if (check?.driver_id !== driver.id) throw new OrderError("Another driver already accepted this delivery", 409);
+  // Compare-and-set so two drivers tapping "Accept" at once can't both get the job.
+  const updated = await db.updateIf(
+    "deliveries",
+    deliveryId,
+    { driver_id: null, status: "unassigned" },
+    { driver_id: driver.id, status: "assigned", assigned_at: new Date().toISOString() },
+  );
+  if (!updated) throw new OrderError("Another driver already accepted this delivery", 409);
   await db.update("drivers", driver.id, { status: "busy" });
   return updated;
 }

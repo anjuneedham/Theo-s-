@@ -152,6 +152,15 @@ export function createLocalDb(): Db {
       persist(state);
       return clone(rows[index]);
     },
+    async updateIf(name, id, where, patch) {
+      const state = load();
+      const rows = table(state, name);
+      const index = rows.findIndex((r) => (r as { id: string }).id === id);
+      if (index === -1 || !matches(rows[index], where)) return null;
+      rows[index] = { ...rows[index], ...clone(patch), id } as Row<typeof name>;
+      persist(state);
+      return clone(rows[index]);
+    },
     async remove(name, id) {
       const state = load();
       const rows = table(state, name);

@@ -470,9 +470,18 @@ export async function updateOrderStatus(
     }
   }
 
-  // Keep delivery + payment records in step with the order.
   const delivery = await db.findOne("deliveries", { order_id: orderId });
   const payment = await db.findOne("payments", { order_id: orderId });
+  const offlineCollected = to === "delivered" && payment?.provider === "offline" && payment.status === "pending";
+  const cancelPending = to === "cancelled" && (payment?.status === "pending" || payment?.status === "requires_action");
+  if (offlineCollected) patch.payment_status = "paid";
+  if (cancelPending) patch.payment_status = "cancelled";
+
+  // Optimistic concurrency: only apply if nobody else moved the order meanwhile.
+  const updated = await db.updateIf("orders", orderId, { status: order.status }, patch);
+  if (!updated) throw new OrderError("This order was just updated by someone else. Refresh and try again.", 409, "conflict");
+
+  // Keep delivery + payment records in step with the order.
   if (delivery) {
     if (to === "out_for_delivery") {
       const driver = user ? await db.findOne("drivers", { user_id: user.id }) : null;
@@ -487,23 +496,14 @@ export async function updateOrderStatus(
     if (to === "cancelled") await db.update("deliveries", delivery.id, { status: "cancelled" });
   }
   if (payment) {
-    if (to === "delivered" && payment.provider === "offline" && payment.status === "pending") {
-      // Staff confirmed handover — cash/card collected.
-      await db.update("payments", payment.id, { status: "paid", updated_at: nowIso });
-      patch.payment_status = "paid";
-    }
-    if (to === "cancelled") {
-      if (payment.status === "pending" || payment.status === "requires_action") {
-        await db.update("payments", payment.id, { status: "cancelled", updated_at: nowIso });
-        patch.payment_status = "cancelled";
-      } else if (payment.status === "paid" && payment.provider !== "offline") {
-        // Online refunds are processed by an admin from the order page so they can be verified.
-        await db.update("payments", payment.id, { failure_reason: "Refund required: order cancelled after payment", updated_at: nowIso });
-      }
+    // Staff confirmed handover — cash/card collected.
+    if (offlineCollected) await db.update("payments", payment.id, { status: "paid", updated_at: nowIso });
+    if (cancelPending) await db.update("payments", payment.id, { status: "cancelled", updated_at: nowIso });
+    if (to === "cancelled" && payment.status === "paid" && payment.provider !== "offline") {
+      // Online refunds are processed by an admin from the order page so they can be verified.
+      await db.update("payments", payment.id, { failure_reason: "Refund required: order cancelled after payment", updated_at: nowIso });
     }
   }
-
-  const updated = await db.update("orders", orderId, patch);
   await db.insert("order_status_history", {
     id: newId(),
     order_id: orderId,

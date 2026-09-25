@@ -92,6 +92,13 @@ export function createSupabaseDb(): Db {
       if (error) fail(table, error);
       return data;
     },
+    async updateIf(table, id, where, patch) {
+      const { data, error } = await applyFilter(client().from(table).update(patch as never).eq("id", id), where)
+        .select("*")
+        .maybeSingle();
+      if (error) fail(table, error);
+      return data ?? null;
+    },
     async remove(table, id) {
       const { error } = await client().from(table).delete().eq("id", id);
       if (error) fail(table, error);

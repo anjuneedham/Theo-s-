@@ -25,5 +25,10 @@ export interface Db {
   insert<T extends TableName>(table: T, row: Row<T>): Promise<Row<T>>;
   insertMany<T extends TableName>(table: T, rows: Row<T>[]): Promise<Row<T>[]>;
   update<T extends TableName>(table: T, id: string, patch: Partial<Row<T>>): Promise<Row<T>>;
+  /**
+   * Atomic compare-and-set: updates the row only if it still matches `where`.
+   * Returns the updated row, or null if another request changed it first.
+   */
+  updateIf<T extends TableName>(table: T, id: string, where: Filter<Row<T>>, patch: Partial<Row<T>>): Promise<Row<T> | null>;
   remove<T extends TableName>(table: T, id: string): Promise<void>;
 }
