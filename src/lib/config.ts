@@ -15,8 +15,13 @@ const supabaseConfigured = Boolean(
     process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
+// Vercel sets VERCEL_URL (host only, no scheme) on every deployment; fall back
+// to it so preview/demo deployments get a correct absolute site URL without
+// each one needing NEXT_PUBLIC_SITE_URL set by hand.
+const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL ?? process.env.VERCEL_URL;
+
 export const config = {
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? (vercelUrl ? `https://${vercelUrl}` : "http://localhost:3000"),
   anchorSlug: process.env.NEXT_PUBLIC_ANCHOR_RESTAURANT_SLUG ?? "theos",
   dataBackend: ((process.env.DATA_BACKEND as DataBackend | undefined) ?? (supabaseConfigured ? "supabase" : "local")) as DataBackend,
   supabaseConfigured,
@@ -26,7 +31,9 @@ export const config = {
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
     storageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? "media",
   },
-  localDataDir: process.env.LOCAL_DATA_DIR ?? ".data",
+  // On Vercel the deployment bundle is read-only; only /tmp is writable
+  // (ephemeral per instance, but fine for a demo deployment on the local backend).
+  localDataDir: process.env.LOCAL_DATA_DIR ?? (process.env.VERCEL ? "/tmp/theos-data" : ".data"),
   seedSampleOrders: bool(process.env.SEED_SAMPLE_ORDERS, true),
   sessionSecret: process.env.SESSION_SECRET ?? "",
   isProduction: process.env.NODE_ENV === "production",
