@@ -103,9 +103,11 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
                 <span className="absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-ember-500 px-1 text-[0.68rem] font-bold text-white">{count}</span>
               )}
             </Link>
-            <Link href="/order" className={buttonClass("primary", "sm", "ml-1 hidden md:inline-flex")}>
-              Order now
-            </Link>
+            <span className="ml-1 hidden md:block">
+              <Link href="/order" className={buttonClass("primary", "sm")}>
+                Order now
+              </Link>
+            </span>
             <button
               className={cn("grid size-10 place-items-center rounded-full xl:hidden", dark ? "hover:bg-cream-50/10" : "hover:bg-night-900/5")}
               onClick={() => setOpen((o) => !o)}

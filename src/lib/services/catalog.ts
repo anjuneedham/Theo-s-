@@ -137,7 +137,7 @@ export async function listMarketplace(filters: { region?: string; category?: str
     db.list("operating_hours"),
     db.list("delivery_zones", { is_active: true }),
     getRegions(),
-    db.list("placements", { status: "active" }),
+    db.list("placements", { status: ["active", "scheduled"] }),
   ]);
   const now = new Date();
   const nowIso = now.toISOString();

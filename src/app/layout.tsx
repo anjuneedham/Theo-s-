@@ -5,6 +5,7 @@ import "./globals.css";
 import { config } from "@/lib/config";
 import { Toaster } from "@/components/ui/toast";
 import { PageViewTracker } from "@/components/site/page-view-tracker";
+import { ServiceWorkerRegister } from "@/components/site/sw-register";
 
 export const metadata: Metadata = {
   metadataBase: new URL(config.siteUrl),
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Toaster />
         <PageViewTracker />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

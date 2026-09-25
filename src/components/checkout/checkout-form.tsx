@@ -63,8 +63,12 @@ export function CheckoutForm({
   const [promo, setPromo] = useState<string | null>(null);
   const [tip, setTip] = useState(0);
   const [notes, setNotes] = useState("");
-  const [quote, setQuote] = useState<Quote | null>(null);
-  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [rawQuote, setQuote] = useState<Quote | null>(null);
+  const [rawQuoteError, setQuoteError] = useState<string | null>(null);
+  const [minLocal] = useState(() => {
+    const d = new Date(Date.now() + 30 * 60000);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -97,14 +101,13 @@ export function CheckoutForm({
     [restaurant, lines, fulfillment, effectiveArea, saved, coords, promo, tipCents],
   );
 
+  const needsLocation = Boolean(quoteBody && quoteBody.fulfillment_type === "delivery" && !quoteBody.area && quoteBody.latitude == null);
+  const quote = needsLocation ? null : rawQuote;
+  const quoteError = needsLocation ? null : rawQuoteError;
+
   // Live server-side quote (debounced) — the totals shown are exactly what will be charged.
   useEffect(() => {
-    if (!quoteBody) return;
-    if (quoteBody.fulfillment_type === "delivery" && !quoteBody.area && quoteBody.latitude == null) {
-      setQuote(null);
-      setQuoteError(null);
-      return;
-    }
+    if (!quoteBody || needsLocation) return;
     const t = setTimeout(async () => {
       try {
         const q = await api<Quote>("/api/v1/quote", { body: quoteBody });
@@ -117,7 +120,7 @@ export function CheckoutForm({
       }
     }, 250);
     return () => clearTimeout(t);
-  }, [quoteBody]);
+  }, [quoteBody, needsLocation]);
 
   if (!hydrated) return <div className="container-page min-h-[60vh] py-16" aria-busy />;
   if (!restaurant || lines.length === 0) {
@@ -199,8 +202,6 @@ export function CheckoutForm({
     }
   }
 
-  const minDate = new Date(Date.now() + 30 * 60000);
-  const minLocal = new Date(minDate.getTime() - minDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
   return (
     <form onSubmit={submit} className="container-page grid gap-8 py-8 pb-40 lg:grid-cols-[1fr_400px] lg:py-12" noValidate>

@@ -523,7 +523,7 @@ export function nextActionsFor(order: Order, actor: Actor) {
 }
 
 /** Apply a verified payment-provider webhook to our records. */
-export async function applyPaymentWebhook(result: { order_id: string | null; provider_reference: string | null; status: Order["payment_status"] | null }) {
+export async function applyPaymentWebhook(result: { order_id: string | null; provider_reference: string | null; status: Order["payment_status"] | null; amount_cents?: number }) {
   if (!result.order_id || !result.status) return;
   const db = getDb();
   const order = await db.get("orders", result.order_id);
@@ -532,6 +532,11 @@ export async function applyPaymentWebhook(result: { order_id: string | null; pro
   const nowIso = new Date().toISOString();
   if (payment) {
     if (result.provider_reference && payment.provider_reference && payment.provider_reference !== result.provider_reference) return;
+    if (result.status === "paid" && result.amount_cents !== undefined && result.amount_cents !== payment.amount_cents) {
+      // Never mark an order paid for the wrong amount — flag it for manual review instead.
+      await db.update("payments", payment.id, { failure_reason: `Amount mismatch: received ${result.amount_cents}, expected ${payment.amount_cents}`, updated_at: nowIso });
+      return;
+    }
     await db.update("payments", payment.id, { status: result.status, updated_at: nowIso });
   }
   await db.update("orders", order.id, { payment_status: result.status, updated_at: nowIso });

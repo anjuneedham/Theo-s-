@@ -58,6 +58,7 @@ function load(): LocalState {
 function persist(state: LocalState) {
   if (!state.writable) return;
   try {
+    fs.mkdirSync(path.dirname(state.file), { recursive: true });
     const tmp = `${state.file}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(state.data));
     fs.renameSync(tmp, state.file);

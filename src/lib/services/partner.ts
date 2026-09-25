@@ -65,13 +65,19 @@ export async function deleteCategory(restaurantId: string, id: string) {
 async function replaceModifierGroups(restaurantId: string, itemId: string, groups: z.infer<typeof modifierGroupInputSchema>[]) {
   const db = getDb();
   const oldGroups = await db.list("menu_item_modifier_groups", { menu_item_id: itemId });
+  const oldGroupIds = new Set(oldGroups.map((g) => g.id));
+  const oldModIds = new Set<string>();
   for (const g of oldGroups) {
-    for (const m of await db.list("menu_item_modifiers", { group_id: g.id })) await db.remove("menu_item_modifiers", m.id);
+    for (const m of await db.list("menu_item_modifiers", { group_id: g.id })) {
+      oldModIds.add(m.id);
+      await db.remove("menu_item_modifiers", m.id);
+    }
     await db.remove("menu_item_modifier_groups", g.id);
   }
+  // Existing ids are kept so customers' saved carts stay valid after an edit.
   for (const [gi, g] of groups.entries()) {
     if (g.max_select > 0 && g.min_select > g.max_select) throw new OrderError(`"${g.name}": minimum can't exceed maximum`, 422);
-    const groupId = newId();
+    const groupId = g.id && oldGroupIds.has(g.id) ? g.id : newId();
     await db.insert("menu_item_modifier_groups", {
       id: groupId,
       restaurant_id: restaurantId,
@@ -84,7 +90,7 @@ async function replaceModifierGroups(restaurantId: string, itemId: string, group
     await db.insertMany(
       "menu_item_modifiers",
       g.modifiers.map((m, mi) => ({
-        id: newId(),
+        id: m.id && oldModIds.has(m.id) ? m.id : newId(),
         restaurant_id: restaurantId,
         group_id: groupId,
         name: m.name,

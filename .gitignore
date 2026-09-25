@@ -12,3 +12,5 @@ playwright-report/
 test-results/
 .DS_Store
 npm-debug.log*
+public/uploads/
+.data-e2e/
