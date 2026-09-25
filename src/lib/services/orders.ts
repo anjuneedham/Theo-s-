@@ -558,3 +558,55 @@ export async function refundOrder(orderId: string, user: SessionUser, amountCent
   await db.update("orders", orderId, { payment_status: result.status, updated_at: nowIso });
   return result;
 }
+
+/**
+ * Rebuild cart lines from a past order against the CURRENT menu (prices and
+ * availability may have changed). Items no longer offered are reported back.
+ */
+export async function reorderLines(orderId: string, viewer: { user: SessionUser | null; token?: string | null }) {
+  const result = await getOrderForViewer(orderId, viewer);
+  if (!result) throw new OrderError("Order not found", 404);
+  const { order, items } = result.detail;
+  const db = getDb();
+  const restaurant = await db.get("restaurants", order.restaurant_id);
+  if (!restaurant || restaurant.status !== "active") throw new OrderError("This restaurant isn't taking orders right now", 409);
+  const [menuItems, groups, modifiers, categories] = await Promise.all([
+    db.list("menu_items", { restaurant_id: restaurant.id }),
+    db.list("menu_item_modifier_groups", { restaurant_id: restaurant.id }),
+    db.list("menu_item_modifiers", { restaurant_id: restaurant.id }),
+    db.list("menu_categories", { restaurant_id: restaurant.id }),
+  ]);
+  const lines = [];
+  const unavailable: string[] = [];
+  for (const oi of items) {
+    const item = menuItems.find((m) => m.id === oi.menu_item_id);
+    if (!item || !item.is_available) {
+      unavailable.push(oi.name);
+      continue;
+    }
+    const itemGroups = groups.filter((g) => g.menu_item_id === item.id);
+    const mods = oi.modifiers
+      .map((om) => {
+        const g = itemGroups.find((x) => x.name === om.group);
+        const m = g && modifiers.find((x) => x.group_id === g.id && x.name === om.name && x.is_available);
+        return m ? { id: m.id, name: m.name, group: om.group, price_delta_cents: m.price_delta_cents } : null;
+      })
+      .filter((m): m is NonNullable<typeof m> => Boolean(m));
+    lines.push({
+      menu_item_id: item.id,
+      name: item.name,
+      image_url: item.image_url,
+      category: categories.find((c) => c.id === item.category_id)?.name ?? "",
+      base_price_cents: item.price_cents,
+      modifiers: mods,
+      quantity: oi.quantity,
+      special_instructions: oi.special_instructions,
+      is_alcohol: item.dietary_tags.includes("alcohol"),
+    });
+  }
+  return {
+    restaurant: { id: restaurant.id, slug: restaurant.slug, name: restaurant.name, currency: restaurant.currency, is_anchor: restaurant.is_anchor },
+    lines,
+    unavailable,
+  };
+}

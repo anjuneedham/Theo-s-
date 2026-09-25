@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Theo's design tokens
+   Warm island palette: night (lounge), cream (daylight), ember (scotch bonnet),
+   gold (cane sugar / rum), leaf (callaloo), clay (pimento wood).
+   --------------------------------------------------------------------------- */
+@theme {
+  --color-night-950: #120d0a;
+  --color-night-900: #1a1310;
+  --color-night-800: #251b16;
+  --color-night-700: #33261f;
+  --color-night-600: #4a382e;
+  --color-cream-50: #fdfaf5;
+  --color-cream-100: #f8f1e6;
+  --color-cream-200: #efe4d2;
+  --color-cream-300: #e2d2b8;
+  --color-ember-50: #fdf0ea;
+  --color-ember-100: #fbd9ca;
+  --color-ember-400: #ec7a52;
+  --color-ember-500: #dc5a2e;
+  --color-ember-600: #c24520;
+  --color-ember-700: #9d361a;
+  --color-gold-300: #ecc983;
+  --color-gold-400: #e0b25f;
+  --color-gold-500: #cf9a3f;
+  --color-gold-600: #a97a2c;
+  --color-leaf-50: #eaf3ee;
+  --color-leaf-500: #3a7a5a;
+  --color-leaf-600: #2f6249;
+  --color-leaf-700: #244c39;
+  --color-clay-400: #a8764f;
+  --color-clay-500: #8a5a3c;
+
+  --font-display: "Fraunces Variable", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 1.25rem;
+  --shadow-soft: 0 1px 2px rgb(26 19 16 / 0.04), 0 8px 24px -12px rgb(26 19 16 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(26 19 16 / 0.06), 0 18px 40px -18px rgb(26 19 16 / 0.35);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-sheet-up: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-fade-in: fade-in 0.2s ease-out both;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-padding-top: 7rem;
+  }
+  body {
+    @apply bg-cream-100 text-night-900 font-sans antialiased;
+    font-feature-settings: "ss01";
+  }
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+  }
+  ::selection {
+    @apply bg-gold-300 text-night-900;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ember-500;
+  }
+  input, select, textarea, button {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .eyebrow {
+    @apply text-[0.7rem] font-bold uppercase tracking-[0.22em] text-ember-600;
+  }
+  .grain {
+    position: relative;
+    isolation: isolate;
+  }
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.08;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .field-input {
+    @apply block w-full rounded-xl border border-cream-300 bg-white px-4 py-3 text-base text-night-900 shadow-[inset_0_1px_1px_rgb(0_0_0/0.03)] transition placeholder:text-night-600/50 focus:border-ember-500 focus:outline-none focus:ring-4 focus:ring-ember-500/15 disabled:bg-cream-100 disabled:text-night-600;
+  }
+  .card {
+    @apply rounded-[var(--radius-card)] border border-cream-200 bg-white shadow-[var(--shadow-soft)];
+  }
+  .prose-theos {
+    @apply max-w-none text-night-700 [&_a]:font-semibold [&_a]:text-ember-600 [&_a]:underline [&_h2]:mt-10 [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:text-night-900 [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_li]:mt-1 [&_p]:mt-3 [&_p]:leading-relaxed [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
